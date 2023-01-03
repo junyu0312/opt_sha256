@@ -1,0 +1,16 @@
+rule cc
+  command = gcc -g -c $in -o $out
+
+rule ar
+  command = ar rcs $out $in
+
+rule wasm
+  command = clang  -flto -O3 -nostdlib -fno-builtin -ffreestanding -mexec-model=reactor --target=wasm32 -Wl,--stack-first -Wl,--strip-all -Wl,--initial-memory=131072 -Wl,--max-memory=131072 -Wl,--no-entry -Wl,--allow-undefined -Wl,--compress-relocations -Wl,--export-dynamic $in -o $out
+
+rule wat
+  command = wasm2wat $in > $out
+
+#build sha256.o: cc sha256.c
+#build demo.o: cc demo.c
+build demo.wasm: wasm demo.c | sha256.c hash-wasm.h
+build demo.wat: wat demo.wasm
