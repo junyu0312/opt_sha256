@@ -23,7 +23,8 @@
 #define sha256_hash_size 32
 #define sha224_hash_size 28
 #define ROTR32(dword, n) ((dword) >> (n) ^ ((dword) << (32 - (n))))
-#define bswap_32(x) __builtin_bswap32(x)
+// #define bswap_32(x) __builtin_bswap32(x)
+uint32_t bswap_32(uint32_t);
 
 struct sha256_ctx
 {
@@ -74,14 +75,31 @@ uint32_t zkwasm_sha256_ssigma1(uint32_t x);
 
 /* Recalculate element n-th of circular buffer W using formula
  *   W[n] = sigma1(W[n - 2]) + W[n - 7] + sigma0(W[n - 15]) + W[n - 16]; */
+#if defined(__wasm__)
+uint32_t zkwasm_sha256_recalculate_w(uint32_t, uint32_t, uint32_t);
+#define RECALCULATE_W(W, n) \
+  (W[n] += zkwasm_sha256_recalculate_w(W[(n - 2) & 15], W[(n - 7) & 15], W[(n - 15) & 15]))
+#else
 #define RECALCULATE_W(W, n) \
   (W[n] +=                  \
    (zkwasm_sha256_ssigma1(W[(n - 2) & 15]) + W[(n - 7) & 15] + zkwasm_sha256_ssigma0(W[(n - 15) & 15])))
+#endif
+
+#if defined(__wasm__)
+uint32_t zkwasm_sha256_temp1(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+uint32_t zkwasm_sha256_temp2(uint32_t, uint32_t, uint32_t);
+#else
+#define zkwasm_sha256_temp1(h, e, f, g, k, data) \
+  (h + zkwasm_sha256_lsigma1(e) + zkwasm_sha256_ch(e, f, g) + k + (data))
+#define zkwasm_sha256_temp2(a, b, c) \
+  (zkwasm_sha256_lsigma0(a) + zkwasm_sha256_maj(a, b, c))
+#endif
 
 #define ROUND(a, b, c, d, e, f, g, h, k, data)                                           \
   {                                                                                      \
-    uint32_t T1 = h + zkwasm_sha256_lsigma1(e) + zkwasm_sha256_ch(e, f, g) + k + (data); \
-    d += T1, h = T1 + zkwasm_sha256_lsigma0(a) + zkwasm_sha256_maj(a, b, c);             \
+    uint32_t T1 = zkwasm_sha256_temp1(h, e, f, g, k, data);                                            \
+    uint32_t T2 = zkwasm_sha256_temp2(a, b, c);                                                        \
+    d += T1, h = T1 + T2;                                                                \
   }
 #define ROUND_1_16(a, b, c, d, e, f, g, h, n) \
   ROUND(a, b, c, d, e, f, g, h, rhash_k256[n], W[n] = bswap_32(block[n]))

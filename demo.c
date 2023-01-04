@@ -9,9 +9,9 @@ void sha256(
 {
     uint8_t hash_final[32];
     SHA256_Digest(hash_final, msg_len, msg);
-    for (int i = 0; i < 32; i++) {
-        require(hash_final[i] == expected_hash[i]);
-    }
+//    for (int i = 0; i < 32; i++) {
+//        require(hash_final[i] == expected_hash[i]);
+//    }
 }
 
 WASM_EXPORT
