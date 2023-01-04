@@ -12,6 +12,8 @@
 #define WASM_EXPORT __attribute__((visibility("default")))
 #endif
 
+void require(int cond);
+
 // Sometimes LLVM emits these functions during the optimization step
 // even with -nostdlib -fno-builtin flags
 #if defined(__wasm__)
